@@ -2,753 +2,279 @@
 <html lang="hu">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>LED vezérlő Firebase teljes</title>
-
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LED vezérlés</title>
   <style>
-    :root{
-      --bg1:#03112d;
-      --bg2:#071a42;
-      --card:#0d1c3aee;
-      --card2:#334058;
-      --text:#ffffff;
-      --muted:#dbe4ff;
-      --on:#27c15d;
-      --off:#ff2a2a;
-      --blue:#4b92ff;
-      --pink:#ff5477;
-      --shadow:0 8px 24px rgba(0,0,0,.22);
-      --radius:18px;
-      --inputText:#111827;
-      --gap:8px;
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(135deg, #0f172a, #1e293b 50%, #0b1220);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
     }
-
-    *{
-      box-sizing:border-box;
-      -webkit-tap-highlight-color: transparent;
+    .panel {
+      width: 100%;
+      max-width: 460px;
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 22px;
+      padding: 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+      backdrop-filter: blur(10px);
     }
-
-    html, body{
-      width:100%;
-      height:100%;
-      margin:0;
-      overflow:hidden;
-      font-family: Arial, sans-serif;
-      color:var(--text);
-      background:
-        linear-gradient(rgba(3,17,45,.72), rgba(3,17,45,.78)),
-        url("bg.jpg") center center / cover no-repeat,
-        linear-gradient(180deg, var(--bg2), var(--bg1));
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      text-align: center;
     }
-
-    body{
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:8px;
+    .sub {
+      margin: 0 0 22px;
+      text-align: center;
+      color: #cbd5e1;
+      font-size: 14px;
     }
-
-    .app{
-      width:min(100%, 560px);
-      height:calc(100dvh - 16px);
-      display:grid;
-      grid-template-rows:auto 1fr auto;
-      gap:var(--gap);
+    .status-box {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.05);
+      margin-bottom: 18px;
     }
-
-    .card{
-      background:var(--card);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      border:1px solid rgba(255,255,255,.06);
+    .status-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
-
-    .title-card{
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      min-height:56px;
-      padding:10px 14px;
-      font-size:clamp(20px, 3.3vw, 26px);
-      font-weight:700;
-      text-align:center;
-      position:relative;
+    .led-dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #ef4444;
+      box-shadow: 0 0 0 rgba(239, 68, 68, 0.7);
+      transition: all 0.25s ease;
     }
-
-    .top-left-badge,
-    .mode-badge{
-      position:absolute;
-      top:10px;
-      font-size:11px;
-      padding:5px 8px;
-      border-radius:999px;
-      background:rgba(255,255,255,.10);
-      color:#fff;
-      max-width:42%;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
+    .led-dot.on {
+      background: #22c55e;
+      box-shadow: 0 0 18px rgba(34, 197, 94, 0.9);
     }
-
-    .top-left-badge{ left:10px; }
-    .mode-badge{ right:10px; }
-
-    .led-card{
-      padding:8px;
-      display:grid;
-      grid-template-rows:auto 1fr;
-      min-height:0;
+    .label {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-bottom: 4px;
     }
-
-    .section-title{
-      text-align:center;
-      font-size:clamp(15px, 2.5vw, 18px);
-      font-weight:700;
-      margin:2px 0 8px;
+    .value {
+      font-size: 18px;
+      font-weight: 700;
     }
-
-    .led-grid{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      grid-template-rows:repeat(4, 1fr);
-      gap:8px;
-      min-height:0;
-      overflow:hidden;
+    .toggle-btn {
+      width: 100%;
+      border: 0;
+      border-radius: 16px;
+      padding: 18px 20px;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      color: white;
+      background: linear-gradient(180deg, #22c55e, #16a34a);
+      box-shadow: 0 10px 24px rgba(34,197,94,0.3);
+      transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+      margin-bottom: 18px;
     }
-
-    .led-box{
-      border-radius:16px;
-      background:var(--card2);
-      padding:8px 9px;
-      display:grid;
-      grid-template-rows:auto 1fr;
-      min-height:0;
-      transition:.2s ease;
+    .toggle-btn:hover { transform: translateY(-1px); }
+    .toggle-btn:active {
+      transform: scale(0.98);
+      box-shadow: 0 6px 14px rgba(34,197,94,0.25);
     }
-
-    .led-box.on{
-      background:linear-gradient(180deg, rgba(39,193,93,.25), rgba(39,193,93,.16));
-      outline:1px solid rgba(39,193,93,.35);
-      box-shadow:0 0 18px rgba(39,193,93,.15) inset;
+    .toggle-btn.off-mode {
+      background: linear-gradient(180deg, #ef4444, #dc2626);
+      box-shadow: 0 10px 24px rgba(239,68,68,0.3);
     }
-
-    .led-row-top{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:6px;
-      min-width:0;
+    .mode-title {
+      font-size: 14px;
+      color: #cbd5e1;
+      margin: 0 0 10px;
     }
-
-    .led-left{
-      display:flex;
-      align-items:center;
-      gap:7px;
-      min-width:0;
-      flex:1;
+    .modes {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 18px;
     }
-
-    .dot{
-      width:11px;
-      height:11px;
-      border-radius:50%;
-      border:2px solid rgba(255,255,255,.45);
-      flex:0 0 auto;
+    .mode-btn {
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.05);
+      color: #fff;
+      border-radius: 14px;
+      padding: 12px 10px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: all .15s ease;
     }
-
-    .led-box.on .dot{
-      background:#b7ffd0;
-      border-color:#9ff0bc;
-      box-shadow:0 0 8px #9ff0bc;
+    .mode-btn.active {
+      background: #2563eb;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59,130,246,.25);
     }
-
-    .led-name{
-      font-size:clamp(12px, 2vw, 15px);
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      font-weight:700;
+    .note {
+      font-size: 13px;
+      color: #94a3b8;
+      line-height: 1.45;
+      background: rgba(255,255,255,0.04);
+      border-radius: 14px;
+      padding: 12px 14px;
     }
-
-    .mini-btn{
-      border:none;
-      color:#fff;
-      border-radius:12px;
-      min-width:42px;
-      height:28px;
-      padding:0 10px;
-      font-size:13px;
-      font-weight:700;
-      cursor:pointer;
-      background:var(--off);
-      flex:0 0 auto;
-    }
-
-    .led-box.on .mini-btn{ background:var(--on); }
-
-    .admin-edit{
-      width:100%;
-      height:30px;
-      border:none;
-      border-radius:8px;
-      padding:0 8px;
-      font-size:12px;
-      background:#ffffff;
-      color:var(--inputText);
-      outline:none;
-    }
-
-    .trim-wrap{
-      margin-top:6px;
-      display:grid;
-      gap:4px;
-      min-height:0;
-    }
-
-    .trim-label{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:8px;
-      font-size:11px;
-      color:var(--muted);
-      font-weight:700;
-    }
-
-    .trim-value{
-      min-width:40px;
-      text-align:right;
-      color:#fff;
-    }
-
-    input[type="range"]{
-      width:100%;
-      margin:0;
-      accent-color:#6a8d1f;
-      cursor:pointer;
-      height:22px;
-    }
-
-    .bottom-card{ padding:8px; }
-    .actions{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-
-    .big-btn{
-      border:none;
-      border-radius:14px;
-      min-height:44px;
-      font-size:clamp(15px, 2.4vw, 18px);
-      font-weight:700;
-      color:#fff;
-      cursor:pointer;
-      box-shadow:var(--shadow);
-    }
-
-    .all-on{ background:linear-gradient(180deg, #4f98ff, #3b82f6); }
-    .all-off{ background:linear-gradient(180deg, #ff6985, #f24764); }
-
-    .status{
-      text-align:center;
-      color:var(--muted);
-      font-size:12px;
-      margin-top:6px;
-      min-height:16px;
-      line-height:1.3;
-    }
-
-    .toolbar{ display:flex; gap:8px; margin-top:8px; }
-
-    .tool-btn{
-      flex:1;
-      border:none;
-      border-radius:12px;
-      height:40px;
-      cursor:pointer;
-      font-size:14px;
-      font-weight:700;
-      color:#fff;
-      background:rgba(255,255,255,.10);
-    }
-
-    .tool-btn.save{ background:linear-gradient(180deg, #27c15d, #18a14b); }
-    .tool-btn.exit{ background:linear-gradient(180deg, #6b7280, #4b5563); }
-
-    #lockScreen{
-      position:fixed;
-      inset:0;
-      background:
-        linear-gradient(rgba(3,17,45,.85), rgba(3,17,45,.88)),
-        url("bg.jpg") center center / cover no-repeat,
-        linear-gradient(180deg, var(--bg2), var(--bg1));
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      z-index:9999;
-      padding:20px;
-    }
-
-    .lock-card{
-      width:min(100%, 420px);
-      background:rgba(9,21,46,.94);
-      border-radius:24px;
-      padding:22px 18px;
-      text-align:center;
-      box-shadow:var(--shadow);
-      border:1px solid rgba(255,255,255,.07);
-    }
-
-    .lock-title{
-      font-size:28px;
-      font-weight:700;
-      margin:0 0 10px;
-    }
-
-    .pin-input{
-      width:100%;
-      height:56px;
-      border:none;
-      outline:none;
-      border-radius:16px;
-      text-align:center;
-      font-size:28px;
-      letter-spacing:10px;
-      margin-bottom:14px;
-    }
-
-    .enter-btn{
-      width:100%;
-      height:54px;
-      border:none;
-      border-radius:16px;
-      background:linear-gradient(180deg, #27c15d, #18a14b);
-      color:#fff;
-      font-size:20px;
-      font-weight:700;
-      cursor:pointer;
-    }
-
-    .error{
-      min-height:20px;
-      color:#ff8e8e;
-      font-size:14px;
-      margin-top:10px;
-    }
-
-    .hidden{ display:none !important; }
-
-    .compact-note{
-      text-align:center;
-      font-size:11px;
-      color:var(--muted);
-      margin-top:8px;
-      line-height:1.35;
-    }
-
-    @media (max-width: 420px){
-      .app{ width:100%; }
-      .title-card{ min-height:50px; font-size:20px; }
-      .led-box{ padding:7px 8px; }
-      .big-btn{ min-height:40px; font-size:14px; }
-    }
-
-    @media (max-height: 760px){
-      .title-card{ min-height:48px; font-size:19px; }
-      .section-title{ margin-bottom:6px; font-size:14px; }
-      .led-box{ padding:6px 7px; }
-      .led-name{ font-size:12px; }
-      .trim-label{ font-size:10px; }
-      .big-btn{ min-height:38px; font-size:13px; }
-      .tool-btn{ height:36px; font-size:13px; }
-      .status{ font-size:11px; }
+    .small {
+      margin-top: 12px;
+      text-align: center;
+      color: #64748b;
+      font-size: 12px;
     }
   </style>
 </head>
 <body>
+  <div class="panel">
+    <h1>LED vezérlés</h1>
+    <p class="sub">Egyszerű, egy fájlos vezérlő hang / néma / rezgés móddal.</p>
 
-  <div id="lockScreen">
-    <div class="lock-card">
-      <div class="lock-title">🔐 PIN védelem</div>
-      <input id="pinInput" class="pin-input" type="password" inputmode="numeric" maxlength="4" placeholder="••••" />
-      <button id="loginBtn" class="enter-btn">Belépés</button>
-      <div id="pinError" class="error"></div>
-      <div class="compact-note">3333 = felhasználó, 4444 = helyi szerkesztés<br>Kapcsoló, trim és név minden eszközön szinkronizál.</div>
-    </div>
-  </div>
-
-  <div class="app">
-    <div class="card title-card">
-      <div id="syncBadge" class="top-left-badge">Firebase</div>
-      💡 LED vezérlő
-      <div id="modeBadge" class="mode-badge hidden">Felhasználó</div>
-    </div>
-
-    <div class="card led-card">
-      <div class="section-title">8 csatorna</div>
-      <div id="ledGrid" class="led-grid"></div>
-    </div>
-
-    <div class="card bottom-card">
-      <div class="actions">
-        <button id="allOnBtn" class="big-btn all-on">Összes BE</button>
-        <button id="allOffBtn" class="big-btn all-off">Összes KI</button>
+    <div class="status-box">
+      <div class="status-left">
+        <div id="ledDot" class="led-dot"></div>
+        <div>
+          <div class="label">Állapot</div>
+          <div id="statusText" class="value">Kikapcsolva</div>
+        </div>
       </div>
-      <div id="adminTools" class="toolbar hidden">
-        <button id="saveNamesBtn" class="tool-btn save">Nevek mentése</button>
-        <button id="exitAdminBtn" class="tool-btn exit">Admin kilépés</button>
+      <div>
+        <div class="label">Mód</div>
+        <div id="modeText" class="value">Bip</div>
       </div>
-      <div id="status" class="status">Státusz: indulás...</div>
     </div>
+
+    <button id="toggleBtn" class="toggle-btn" onclick="toggleLed()">Bekapcsolás</button>
+
+    <p class="mode-title">Visszajelzés mód:</p>
+    <div class="modes">
+      <button class="mode-btn" data-mode="silent" onclick="setMode('silent')">Néma</button>
+      <button class="mode-btn" data-mode="bip" onclick="setMode('bip')">Bip</button>
+      <button class="mode-btn" data-mode="vibrate" onclick="setMode('vibrate')">Rezeg</button>
+    </div>
+
+    <div class="note">
+      Ez a fájl önmagában fut. A bip hang külső hangfájl nélkül működik. A rezgés funkció főleg mobilon működik.
+    </div>
+
+    <div class="small">A választott mód és a LED állapot elmentődik a böngészőben.</div>
   </div>
 
   <script>
-    const USER_PIN = "3333";
-    const ADMIN_PIN = "4444";
+    let ledOn = false;
+    let mode = localStorage.getItem('feedbackMode') || 'bip';
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyA6x6CQGKTGm3mQcU8lCF2AzQ-ti24NPkg",
-      authDomain: "led-vezerlo.firebaseapp.com",
-      databaseURL: "https://led-vezerlo-default-rtdb.europe-west1.firebasedatabase.app",
-      projectId: "led-vezerlo",
-      storageBucket: "led-vezerlo.firebasestorage.app",
-      messagingSenderId: "843559426080",
-      appId: "1:843559426080:web:c7721a0821ce5fbd3e8445"
-    };
-
-    const SHARED_PATH = "ledcontrol/shared";
-
-    let uiMode = "user";
-    let dbRef = null;
-    let firebaseReady = false;
-
-    let sharedState = createDefaultState();
-
-    const ledGrid = document.getElementById("ledGrid");
-    const statusEl = document.getElementById("status");
-    const modeBadge = document.getElementById("modeBadge");
-    const adminTools = document.getElementById("adminTools");
-    const pinInput = document.getElementById("pinInput");
-    const pinError = document.getElementById("pinError");
-    const lockScreen = document.getElementById("lockScreen");
-    const loginBtn = document.getElementById("loginBtn");
-    const saveNamesBtn = document.getElementById("saveNamesBtn");
-    const exitAdminBtn = document.getElementById("exitAdminBtn");
-    const allOnBtn = document.getElementById("allOnBtn");
-    const allOffBtn = document.getElementById("allOffBtn");
-    const syncBadge = document.getElementById("syncBadge");
-
-    function createDefaultState(){
-      return {
-        leds: [
-          { id: 1, name: "LED 1", on: false, brightness: 50 },
-          { id: 2, name: "LED 2", on: false, brightness: 50 },
-          { id: 3, name: "LED 3", on: false, brightness: 50 },
-          { id: 4, name: "LED 4", on: false, brightness: 50 },
-          { id: 5, name: "LED 5", on: false, brightness: 50 },
-          { id: 6, name: "LED 6", on: false, brightness: 50 },
-          { id: 7, name: "LED 7", on: false, brightness: 50 },
-          { id: 8, name: "LED 8", on: false, brightness: 50 }
-        ],
-        meta: {
-          lastAction: "Kész",
-          updatedAt: Date.now()
-        }
-      };
+    function saveState() {
+      localStorage.setItem('feedbackMode', mode);
+      localStorage.setItem('ledState', ledOn ? 'on' : 'off');
     }
 
-    function clampBrightness(value){
-      const num = Number(value);
-      if (Number.isNaN(num)) return 50;
-      return Math.max(0, Math.min(100, Math.round(num)));
+    function restoreState() {
+      ledOn = localStorage.getItem('ledState') === 'on';
+      updateUI();
+      setMode(mode, false);
     }
 
-    function normalizeState(data){
-      const fallback = createDefaultState();
-      if (!data || !Array.isArray(data.leds)) return fallback;
+    function updateUI() {
+      const ledDot = document.getElementById('ledDot');
+      const statusText = document.getElementById('statusText');
+      const toggleBtn = document.getElementById('toggleBtn');
 
-      const leds = data.leds.slice(0, 8).map((led, index) => ({
-        id: Number(led?.id ?? (index + 1)),
-        name: String(led?.name ?? `LED ${index + 1}`),
-        on: Boolean(led?.on),
-        brightness: clampBrightness(led?.brightness)
-      }));
-
-      while (leds.length < 8) {
-        const id = leds.length + 1;
-        leds.push({ id, name: `LED ${id}`, on: false, brightness: 50 });
+      if (ledOn) {
+        ledDot.classList.add('on');
+        statusText.textContent = 'Bekapcsolva';
+        toggleBtn.textContent = 'Kikapcsolás';
+        toggleBtn.classList.add('off-mode');
+      } else {
+        ledDot.classList.remove('on');
+        statusText.textContent = 'Kikapcsolva';
+        toggleBtn.textContent = 'Bekapcsolás';
+        toggleBtn.classList.remove('off-mode');
       }
+    }
 
-      return {
-        leds,
-        meta: {
-          lastAction: String(data?.meta?.lastAction ?? "Szinkron kész"),
-          updatedAt: Number(data?.meta?.updatedAt ?? Date.now())
-        }
+    function setMode(newMode, save = true) {
+      mode = newMode;
+      const modeText = document.getElementById('modeText');
+      const labels = {
+        silent: 'Néma',
+        bip: 'Bip',
+        vibrate: 'Rezeg'
       };
-    }
+      modeText.textContent = labels[newMode] || 'Bip';
 
-    function setStatus(text){
-      statusEl.textContent = `Státusz: ${text}`;
-    }
-
-    function setSyncBadge(text){
-      syncBadge.textContent = text;
-    }
-
-    function getLedById(id){
-      return sharedState.leds.find(x => x.id === id);
-    }
-
-    function markMeta(actionText){
-      sharedState.meta = {
-        lastAction: actionText,
-        updatedAt: Date.now()
-      };
-    }
-
-    function render(){
-      ledGrid.innerHTML = "";
-
-      sharedState.leds.forEach((led) => {
-        const box = document.createElement("div");
-        box.className = "led-box" + (led.on ? " on" : "");
-
-        const rowTop = document.createElement("div");
-        rowTop.className = "led-row-top";
-
-        const left = document.createElement("div");
-        left.className = "led-left";
-
-        const dot = document.createElement("div");
-        dot.className = "dot";
-        left.appendChild(dot);
-
-        if (uiMode === "admin") {
-          const input = document.createElement("input");
-          input.className = "admin-edit";
-          input.value = led.name;
-          input.dataset.id = led.id;
-          input.maxLength = 30;
-          left.appendChild(input);
-        } else {
-          const name = document.createElement("div");
-          name.className = "led-name";
-          name.textContent = led.name;
-          left.appendChild(name);
-        }
-
-        const btn = document.createElement("button");
-        btn.className = "mini-btn";
-        btn.textContent = led.on ? "BE" : "KI";
-        btn.addEventListener("click", () => toggleLed(led.id));
-
-        rowTop.appendChild(left);
-        rowTop.appendChild(btn);
-
-        const trimWrap = document.createElement("div");
-        trimWrap.className = "trim-wrap";
-
-        const trimLabel = document.createElement("div");
-        trimLabel.className = "trim-label";
-        trimLabel.innerHTML = `<span>Trim</span><span class="trim-value">${led.brightness}%</span>`;
-
-        const slider = document.createElement("input");
-        slider.type = "range";
-        slider.min = "0";
-        slider.max = "100";
-        slider.value = String(led.brightness);
-
-        slider.addEventListener("input", (e) => {
-          trimLabel.querySelector(".trim-value").textContent = `${clampBrightness(e.target.value)}%`;
-        });
-
-        slider.addEventListener("change", (e) => {
-          updateLedBrightness(led.id, clampBrightness(e.target.value));
-        });
-
-        trimWrap.appendChild(trimLabel);
-        trimWrap.appendChild(slider);
-        box.appendChild(rowTop);
-        box.appendChild(trimWrap);
-        ledGrid.appendChild(box);
+      document.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === newMode);
       });
 
-      modeBadge.classList.remove("hidden");
-      modeBadge.textContent = uiMode === "admin" ? "Admin mód" : "Felhasználó";
-      adminTools.classList.toggle("hidden", uiMode !== "admin");
+      if (save) saveState();
     }
 
-    function applyRemoteState(data){
-      sharedState = normalizeState(data);
-      render();
-      setStatus(sharedState.meta?.lastAction || "Szinkron aktív");
+    function playBeep() {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
+
+      const audioContext = new AudioContextClass();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+      gainNode.gain.setValueAtTime(0.001, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.12, audioContext.currentTime + 0.01);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.12);
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.13);
+
+      oscillator.onended = () => {
+        if (audioContext.state !== 'closed') audioContext.close();
+      };
     }
 
-    function initFirebase(){
-      if (typeof firebase === "undefined") {
-        firebaseReady = false;
-        setSyncBadge("Firebase hiba");
-        setStatus("A Firebase könyvtár nem töltött be");
-        render();
+    function playFeedback() {
+      if (mode === 'silent') return;
+      if (mode === 'bip') {
+        playBeep();
         return;
       }
-
-      try {
-        if (!firebase.apps.length) {
-          firebase.initializeApp(firebaseConfig);
-        }
-
-        dbRef = firebase.database().ref(SHARED_PATH);
-        firebaseReady = true;
-        setSyncBadge("Firebase online");
-
-        dbRef.once("value").then((snapshot) => {
-          if (!snapshot.exists()) {
-            return dbRef.set(sharedState);
-          }
-          applyRemoteState(snapshot.val());
-        }).catch((error) => {
-          console.error("Firebase init hiba:", error);
-          setSyncBadge("Firebase init hiba");
-          setStatus("Nem sikerült a kezdeti kapcsolódás");
-        });
-
-        dbRef.on("value", (snapshot) => {
-          const data = snapshot.val();
-          if (!data) return;
-          applyRemoteState(data);
-        }, (error) => {
-          console.error("Firebase figyelési hiba:", error);
-          setSyncBadge("Firebase szinkron hiba");
-          setStatus("A valós idejű figyelés hibára futott");
-        });
-
-      } catch (error) {
-        console.error("Firebase teljes hiba:", error);
-        firebaseReady = false;
-        setSyncBadge("Firebase hiba");
-        setStatus("Kapcsolódási hiba");
+      if (mode === 'vibrate' && navigator.vibrate) {
+        navigator.vibrate(120);
       }
     }
 
-    function persistWholeSharedState(actionText){
-      if (!firebaseReady || !dbRef) {
-        setStatus("Nincs aktív Firebase kapcsolat");
-        return Promise.resolve();
-      }
+    function toggleLed() {
+      ledOn = !ledOn;
+      playFeedback();
+      updateUI();
+      saveState();
 
-      markMeta(actionText);
-      return dbRef.set(sharedState)
-        .then(() => setStatus(actionText))
-        .catch((error) => {
-          console.error("Teljes mentési hiba:", error);
-          setStatus("Mentési hiba");
-        });
+      // Itt tudod később hozzáadni a valódi LED vezérlésedet, pl. fetch() hívással.
+      // Példa:
+      // fetch('/api/led', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ state: ledOn ? 'on' : 'off' })
+      // });
     }
 
-    function persistSingleLed(ledId, actionText){
-      if (!firebaseReady || !dbRef) {
-        setStatus("Nincs aktív Firebase kapcsolat");
-        return Promise.resolve();
-      }
-
-      const led = getLedById(ledId);
-      if (!led) return Promise.resolve();
-
-      markMeta(actionText);
-      const index = sharedState.leds.findIndex(x => x.id === ledId);
-      if (index === -1) return Promise.resolve();
-
-      const updates = {};
-      updates[`leds/${index}`] = led;
-      updates["meta"] = sharedState.meta;
-
-      return dbRef.update(updates)
-        .then(() => setStatus(actionText))
-        .catch((error) => {
-          console.error("LED mentési hiba:", error);
-          setStatus("LED mentési hiba");
-        });
-    }
-
-    function login(){
-      const pin = pinInput.value.trim();
-
-      if (pin === USER_PIN) {
-        uiMode = "user";
-        lockScreen.style.display = "none";
-        pinError.textContent = "";
-        render();
-        setStatus("Felhasználói mód");
-      } else if (pin === ADMIN_PIN) {
-        uiMode = "admin";
-        lockScreen.style.display = "none";
-        pinError.textContent = "";
-        render();
-        setStatus("Admin mód csak ezen a készüléken");
-      } else {
-        pinError.textContent = "Hibás PIN kód.";
-      }
-    }
-
-    function toggleLed(id){
-      const led = getLedById(id);
-      if (!led) return;
-      led.on = !led.on;
-      render();
-      persistSingleLed(id, `${led.name} → ${led.on ? "BE" : "KI"}`);
-    }
-
-    function updateLedBrightness(id, value){
-      const led = getLedById(id);
-      if (!led) return;
-      led.brightness = clampBrightness(value);
-      render();
-      persistSingleLed(id, `${led.name} trim → ${led.brightness}%`);
-    }
-
-    function setAll(newState){
-      sharedState.leds.forEach((led) => {
-        led.on = newState;
-      });
-      render();
-      persistWholeSharedState(`Összes → ${newState ? "BE" : "KI"}`);
-    }
-
-    function saveNames(){
-      if (uiMode !== "admin") return;
-
-      const inputs = document.querySelectorAll(".admin-edit");
-      inputs.forEach((input) => {
-        const led = getLedById(Number(input.dataset.id));
-        if (led) {
-          led.name = input.value.trim() || `LED ${input.dataset.id}`;
-        }
-      });
-
-      render();
-      persistWholeSharedState("LED nevek mentve");
-    }
-
-    function exitAdmin(){
-      uiMode = "user";
-      render();
-      setStatus("Admin mód kikapcsolva");
-    }
-
-    loginBtn.addEventListener("click", login);
-    pinInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") login();
-    });
-
-    saveNamesBtn.addEventListener("click", saveNames);
-    exitAdminBtn.addEventListener("click", exitAdmin);
-    allOnBtn.addEventListener("click", () => setAll(true));
-    allOffBtn.addEventListener("click", () => setAll(false));
-
-    render();
-    initFirebase();
+    restoreState();
   </script>
 </body>
 </html>
