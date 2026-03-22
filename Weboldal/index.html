@@ -438,6 +438,37 @@
     const allOffBtn = document.getElementById("allOffBtn");
     const syncBadge = document.getElementById("syncBadge");
 
+    function playFeedback(){
+      if (navigator.vibrate) {
+        navigator.vibrate(100);
+      }
+
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+
+        const audioCtx = new AudioCtx();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+
+        oscillator.type = "sine";
+        oscillator.frequency.value = 800;
+        gainNode.gain.value = 0.2;
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        oscillator.start();
+        setTimeout(() => {
+          try { oscillator.stop(); } catch (_) {}
+          audioCtx.close();
+        }, 100);
+      } catch (error) {
+        console.log("Hang visszajelzés nem támogatott:", error);
+      }
+    }
+
+
     function createDefaultState(){
       return {
         leds: [
@@ -696,6 +727,7 @@
       const led = getLedById(id);
       if (!led) return;
       led.on = !led.on;
+      playFeedback();
       render();
       persistSingleLed(id, `${led.name} → ${led.on ? "BE" : "KI"}`);
     }
@@ -712,6 +744,7 @@
       sharedState.leds.forEach((led) => {
         led.on = newState;
       });
+      playFeedback();
       render();
       persistWholeSharedState(`Összes → ${newState ? "BE" : "KI"}`);
     }
